@@ -4,716 +4,505 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#3B82F6">
-    <meta name="description" content="App para registrar y hacer seguimiento del hábito de lectura">
     <title>Registro de Lectura</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { margin: 0; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; }
+        .container { max-width: 48rem; margin: 0 auto; padding: 1rem; padding-bottom: 5rem; }
+        header { margin-bottom: 1.5rem; }
+        h1 { font-size: 1.875rem; font-weight: bold; color: #1f2937; }
+        .subtitle { color: #6b7280; }
+        
+        .card { background: white; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; }
+        .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; }
+        
+        .gradient-card { background: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%); color: white; }
+        .gradient-card .big-number { font-size: 3rem; font-weight: bold; margin: 0.5rem 0; }
+        .gradient-card .next-milestone { opacity: 0.9; font-size: 0.875rem; }
+        
+        .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.2s; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: #d1d5db; color: #1f2937; }
+        .btn-secondary:hover { background: #9ca3af; }
+        .btn:disabled { background: #d1d5db; cursor: not-allowed; }
+        
+        .book-item { padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .book-item:hover { border-color: #9ca3af; }
+        .book-item.selected { border-color: #3b82f6; background: #eff6ff; }
+        .book-title { font-weight: 600; margin-bottom: 0.25rem; }
+        .book-date { font-size: 0.875rem; color: #6b7280; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; padding: 1rem; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 0.5rem; padding: 1.5rem; max-width: 28rem; width: 100%; }
+        .modal h3 { font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; }
+        
+        input[type="text"], input[type="number"], textarea { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; }
+        textarea { min-height: 8rem; resize: vertical; }
+        
+        .session-timer { background: white; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; text-align: center; }
+        .timer-label { font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem; }
+        .timer-value { font-size: 2.5rem; font-weight: bold; color: #3b82f6; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .stat-card { background: white; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-label { font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: #3b82f6; }
+        
+        .chart-container { margin-top: 1rem; }
+        .chart { display: flex; align-items: flex-end; height: 10rem; border-left: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; padding: 0.5rem 0; }
+        .bar { flex: 1; background: #3b82f6; border-radius: 0.25rem 0.25rem 0 0; margin: 0 1px; min-width: 0.5rem; transition: all 0.2s; cursor: pointer; }
+        .bar:hover { background: #2563eb; }
+        .day-label { text-align: center; font-size: 0.625rem; color: #6b7280; margin-top: 0.25rem; }
+        
+        .month-bar { display: flex; align-items: center; margin-bottom: 0.5rem; }
+        .month-label { width: 3rem; font-size: 0.875rem; font-weight: 600; }
+        .month-bar-bg { flex: 1; background: #e5e7eb; border-radius: 0.375rem; height: 1.5rem; position: relative; }
+        .month-bar-fill { background: #9333ea; height: 100%; border-radius: 0.375rem; display: flex; align-items: center; justify-content: flex-end; padding: 0 0.5rem; transition: all 0.3s; }
+        .month-bar-text { color: white; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+        
+        .nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; box-shadow: 0 -1px 3px rgba(0,0,0,0.1); }
+        .nav-container { max-width: 48rem; margin: 0 auto; display: flex; justify-content: space-around; padding: 0.75rem; }
+        .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; color: #6b7280; cursor: pointer; padding: 0.5rem; }
+        .nav-btn.active { color: #3b82f6; }
+        .nav-icon { width: 1.5rem; height: 1.5rem; }
+        .nav-label { font-size: 0.75rem; }
+        
+        .alert { background: #d1fae5; border-left: 4px solid #10b981; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem; animation: slideIn 0.3s; }
+        .alert-text { color: #065f46; font-weight: 600; }
+        
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-1rem); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .pulse { animation: pulse 2s infinite; }
+        
+        .hidden { display: none; }
+        .mb-1 { margin-bottom: 0.25rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-3 { margin-bottom: 0.75rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .flex { display: flex; }
+        .gap-2 { gap: 0.5rem; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+        .text-gray { color: #6b7280; }
+        .font-semibold { font-weight: 600; }
+        
+        .session-options { display: flex; flex-direction: column; gap: 0.75rem; }
+        .option-btn { border: 2px solid #3b82f6; background: white; padding: 1rem; border-radius: 0.5rem; text-align: left; cursor: pointer; transition: all 0.2s; }
+        .option-btn:hover { background: #eff6ff; }
+        .option-title { font-weight: 600; margin-bottom: 0.25rem; }
+        .option-desc { font-size: 0.875rem; color: #6b7280; }
+        
+        .timer-input-group { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
+        .timer-input { width: 5rem; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div class="container">
+        <header>
+            <h1>Registro de Lectura</h1>
+            <p class="subtitle">Construye tu hábito día a día</p>
+        </header>
+        
+        <div id="app"></div>
+    </div>
     
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        const { Book, Clock, TrendingUp, Calendar, CheckCircle, Play, Pause, Timer } = lucide;
-
-        const ReadingTracker = () => {
-          const [view, setView] = useState('home');
-          const [books, setBooks] = useState([]);
-          const [sessions, setSessions] = useState([]);
-          const [currentSession, setCurrentSession] = useState(null);
-          const [sessionType, setSessionType] = useState(null);
-          const [timerMinutes, setTimerMinutes] = useState(10);
-          const [elapsedSeconds, setElapsedSeconds] = useState(0);
-          const [selectedBook, setSelectedBook] = useState(null);
-          const [showMilestone, setShowMilestone] = useState(false);
-          const [milestoneText, setMilestoneText] = useState('');
-          const [showSessionOptions, setShowSessionOptions] = useState(false);
-          const [completingBookData, setCompletingBookData] = useState(null);
-          const [showAddBookModal, setShowAddBookModal] = useState(false);
-          
-          const intervalRef = useRef(null);
-          const alarmPlayedRef = useRef(false);
-
-          useEffect(() => {
-            const savedBooks = localStorage.getItem('readingBooks');
-            const savedSessions = localStorage.getItem('readingSessions');
-            if (savedBooks) setBooks(JSON.parse(savedBooks));
-            if (savedSessions) setSessions(JSON.parse(savedSessions));
-          }, []);
-
-          useEffect(() => {
-            localStorage.setItem('readingBooks', JSON.stringify(books));
-          }, [books]);
-
-          useEffect(() => {
-            localStorage.setItem('readingSessions', JSON.stringify(sessions));
-          }, [sessions]);useEffect(() => {
-            if (currentSession) {
-              alarmPlayedRef.current = false;
-              intervalRef.current = setInterval(() => {
-                const now = new Date();
-                const start = new Date(currentSession.startTime);
-                const elapsed = Math.floor((now - start) / 1000);
-                setElapsedSeconds(elapsed);
-
-                if (sessionType === 'timer' && elapsed >= timerMinutes * 60 && !alarmPlayedRef.current) {
-                  alarmPlayedRef.current = true;
-                  playAlarm();
-                  setTimeout(() => {
-                    endSessionAuto();
-                  }, 2000);
-                }
-              }, 1000);
-            } else {
-              if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-              }
-              setElapsedSeconds(0);
-            }
-
-            return () => {
-              if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-              }
-            };
-          }, [currentSession, sessionType, timerMinutes]);
-
-          const playAlarm = () => {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+    <nav class="nav">
+        <div class="nav-container">
+            <button class="nav-btn active" onclick="app.setView('home')">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="nav-label">Inicio</span>
+            </button>
+            <button class="nav-btn" onclick="app.setView('stats')">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                <span class="nav-label">Estadísticas</span>
+            </button>
+            <button class="nav-btn" onclick="app.setView('books')">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span class="nav-label">Libros</span>
+            </button>
+        </div>
+    </nav>
+    
+    <script>const app = {
+            view: 'home',
+            books: [],
+            sessions: [],
+            currentSession: null,
+            sessionType: null,
+            timerMinutes: 10,
+            elapsedSeconds: 0,
+            selectedBook: null,
+            intervalId: null,
+            alarmPlayed: false,
             
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+            init() {
+                this.loadData();
+                this.render();
+                setInterval(() => {
+                    if (this.currentSession) {
+                        this.updateTimer();
+                    }
+                }, 1000);
+            },
             
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
+            loadData() {
+                const savedBooks = localStorage.getItem('readingBooks');
+                const savedSessions = localStorage.getItem('readingSessions');
+                if (savedBooks) this.books = JSON.parse(savedBooks);
+                if (savedSessions) this.sessions = JSON.parse(savedSessions);
+            },
             
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            saveData() {
+                localStorage.setItem('readingBooks', JSON.stringify(this.books));
+                localStorage.setItem('readingSessions', JSON.stringify(this.sessions));
+            },
             
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 1);
-          };
-
-          const formatTime = (seconds) => {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-          };
-
-          const getRemainingTime = () => {
-            const totalSeconds = timerMinutes * 60;
-            const remaining = Math.max(0, totalSeconds - elapsedSeconds);
-            return formatTime(remaining);
-          };
-
-          const getConsecutiveDays = () => {
-            if (sessions.length === 0) return 0;
+            setView(view) {
+                this.view = view;
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                event.target.closest('.nav-btn').classList.add('active');
+                this.render();
+            },
             
-            const sortedSessions = [...sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const uniqueDays = [...new Set(sortedSessions.map(s => s.date))];
+            render() {
+                const appEl = document.getElementById('app');
+                if (this.view === 'home') appEl.innerHTML = this.renderHome();
+                else if (this.view === 'stats') appEl.innerHTML = this.renderStats();
+                else if (this.view === 'books') appEl.innerHTML = this.renderBooks();
+            },
             
-            let consecutive = 0;
-            const today = new Date().toISOString().split('T')[0];
-            let checkDate = new Date(today);
+            formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            },
             
-            for (let day of uniqueDays) {
-              const dayStr = checkDate.toISOString().split('T')[0];
-              if (day === dayStr) {
-                consecutive++;
-                checkDate.setDate(checkDate.getDate() - 1);
-              } else {
-                break;
-              }
-            }
-            
-            return consecutive;
-          };
-
-          const consecutiveDays = getConsecutiveDays();
-          const milestones = [3, 7, 14, 30, 60, 100, 365];
-          const nextMilestone = milestones.find(m => m > consecutiveDays) || null;
-          const lastAchievedMilestone = milestones.filter(m => m <= consecutiveDays).pop();
-
-          const startSession = (type) => {
-            if (!selectedBook) {
-              alert('Por favor selecciona un libro primero');
-              return;
-            }
-            
-            const now = new Date();
-            setCurrentSession({
-              bookId: selectedBook,
-              startTime: now.toISOString(),
-              date: now.toISOString().split('T')[0]
-            });
-            setSessionType(type);
-            setShowSessionOptions(false);
-
-            if (nextMilestone) {
-              setMilestoneText(`Próximo hito: ${nextMilestone} días consecutivos`);
-              setShowMilestone(true);
-              setTimeout(() => setShowMilestone(false), 3000);
-            }
-          };
-
-          const endSessionAuto = () => {
-            if (!currentSession) return;
-            
-            const endTime = new Date();
-            const start = new Date(currentSession.startTime);
-            const minutes = Math.round((endTime - start) / 60000);
-
-            const newSession = {
-              id: Date.now(),
-              bookId: currentSession.bookId,
-              date: currentSession.date,
-              startTime: currentSession.startTime,
-              endTime: endTime.toISOString(),
-              minutes: minutes
-            };
-
-            const updatedSessions = [...sessions, newSession];
-            setSessions(updatedSessions);
-
-            const newConsecutive = getConsecutiveDaysForSessions(updatedSessions);
-            if (milestones.includes(newConsecutive) && newConsecutive !== lastAchievedMilestone) {
-              setMilestoneText(`¡Hito alcanzado! ${newConsecutive} días consecutivos 🎉`);
-              setShowMilestone(true);
-              setTimeout(() => setShowMilestone(false), 4000);
-            }
-
-            setCurrentSession(null);
-            setSessionType(null);
-          };
-
-          const endSession = () => {
-            endSessionAuto();
-          };
-
-          const getConsecutiveDaysForSessions = (sessionsList) => {
-            if (sessionsList.length === 0) return 0;
-            
-            const sortedSessions = [...sessionsList].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const uniqueDays = [...new Set(sortedSessions.map(s => s.date))];
-            
-            let consecutive = 0;
-            const today = new Date().toISOString().split('T')[0];
-            let checkDate = new Date(today);
-            
-            for (let day of uniqueDays) {
-              const dayStr = checkDate.toISOString().split('T')[0];
-              if (day === dayStr) {
-                consecutive++;
-                checkDate.setDate(checkDate.getDate() - 1);
-              } else {
-                break;
-              }
-            }
-            
-            return consecutive;
-          };
-
-          const completeBook = (bookId, comment) => {
-            setBooks(prevBooks => prevBooks.map(b => 
-              b.id === bookId 
-                ? { ...b, completed: true, completedDate: new Date().toISOString().split('T')[0], comment }
-                : b
-            ));
-          };
-
-          const getTotalMinutes = (filterDate = null) => {
-            return sessions
-              .filter(s => !filterDate || s.date === filterDate)
-              .reduce((sum, s) => sum + s.minutes, 0);
-          };
-
-          const getMinutesByDayThisMonth = () => {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
-            const data = [];
-            for (let day = 1; day <= daysInMonth; day++) {
-              const date = new Date(year, month, day).toISOString().split('T')[0];
-              const minutes = getTotalMinutes(date);
-              data.push({ day, minutes });
-            }
-            return data;
-          };
-
-          const getMinutesByMonthThisYear = () => {
-            const year = new Date().getFullYear();
-            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            
-            return monthNames.map((name, index) => {
-              const minutes = sessions
-                .filter(s => {
-                  const sessionDate = new Date(s.date);
-                  return sessionDate.getFullYear() === year && sessionDate.getMonth() === index;
-                })
-                .reduce((sum, s) => sum + s.minutes, 0);
-              return { month: name, minutes };
-            });
-          };const HomeView = () => {
-            const [newBookInput, setNewBookInput] = useState('');
-
-            const handleAddBookFromModal = () => {
-              if (!newBookInput.trim()) return;
-              const book = {
-                id: Date.now(),
-                title: newBookInput.trim(),
-                startDate: new Date().toISOString().split('T')[0],
-                completed: false
-              };
-              setBooks(prev => [...prev, book]);
-              setSelectedBook(book.id);
-              setNewBookInput('');
-              setShowAddBookModal(false);
-            };
-
-            return (
-            <div className="space-y-6">
-              {showMilestone && (
-                <div className="bg-green-100 border-l-4 border-green-500 p-4 rounded animate-pulse">
-                  <p className="text-green-700 font-semibold">{milestoneText}</p>
-                </div>
-              )}
-
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold">Días Consecutivos</h2>
-                  <Calendar className="w-8 h-8" />
-                </div>
-                <p className="text-5xl font-bold mb-2">{consecutiveDays}</p>
-                {nextMilestone && (
-                  <p className="text-sm opacity-90">Siguiente hito: {nextMilestone} días</p>
-                )}
-              </div>
-
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Book className="w-5 h-5" />
-                  Seleccionar Libro
-                </h3>
+            getConsecutiveDays() {
+                if (this.sessions.length === 0) return 0;
+                const uniqueDays = [...new Set(this.sessions.map(s => s.date))].sort().reverse();
+                let consecutive = 0;
+                const today = new Date().toISOString().split('T')[0];
+                let checkDate = new Date(today);
                 
-                <div className="space-y-3 mb-4">
-                  {books.filter(b => !b.completed).map(book => (
-                    <div
-                      key={book.id}
-                      onClick={() => setSelectedBook(book.id)}
-                      className={`p-3 rounded border-2 cursor-pointer transition ${
-                        selectedBook === book.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <p className="font-medium">{book.title}</p>
-                      <p className="text-sm text-gray-500">Iniciado: {book.startDate}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => setShowAddBookModal(true)}
-                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  + Agregar Nuevo Libro
-                </button>
-              </div>
-
-              {showAddBookModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                  <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                    <h3 className="font-semibold text-lg mb-4">Agregar Libro</h3>
-                    <input
-                      type="text"
-                      value={newBookInput}
-                      onChange={(e) => setNewBookInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddBookFromModal();
+                for (let day of uniqueDays) {
+                    const dayStr = checkDate.toISOString().split('T')[0];
+                    if (day === dayStr) {
+                        consecutive++;
+                        checkDate.setDate(checkDate.getDate() - 1);
+                    } else break;
+                }
+                return consecutive;
+            },
+            
+            getTotalMinutes(date = null) {
+                return this.sessions
+                    .filter(s => !date || s.date === date)
+                    .reduce((sum, s) => sum + s.minutes, 0);
+            },
+            
+            updateTimer() {
+                const now = new Date();
+                const start = new Date(this.currentSession.startTime);
+                this.elapsedSeconds = Math.floor((now - start) / 1000);
+                
+                const timerEl = document.querySelector('.timer-value');
+                if (timerEl) {
+                    if (this.sessionType === 'timer') {
+                        const remaining = Math.max(0, this.timerMinutes * 60 - this.elapsedSeconds);
+                        timerEl.textContent = this.formatTime(remaining);
+                        
+                        if (remaining === 0 && !this.alarmPlayed) {
+                            this.alarmPlayed = true;
+                            this.playAlarm();
+                            setTimeout(() => this.endSession(), 2000);
                         }
-                      }}
-                      placeholder="Título del libro"
-                      className="w-full px-3 py-2 border rounded mb-4"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleAddBookFromModal}
-                        className="flex-1 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                      >
-                        Agregar
-                      </button>
-                      <button
-                        onClick={() => {
-                          setNewBookInput('');
-                          setShowAddBookModal(false);
-                        }}
-                        className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                      >
-                        Cancelar
-                      </button>
+                    } else {
+                        timerEl.textContent = this.formatTime(this.elapsedSeconds);
+                    }
+                }
+            },
+            
+            playAlarm() {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1);
+            },
+            
+            addBook(title) {
+                if (!title.trim()) return;
+                const book = {
+                    id: Date.now(),
+                    title: title.trim(),
+                    startDate: new Date().toISOString().split('T')[0],
+                    completed: false
+                };
+                this.books.push(book);
+                this.selectedBook = book.id;
+                this.saveData();
+                this.closeModal('addBookModal');
+                this.render();
+            },
+            
+            startSession(type) {
+                if (!this.selectedBook) {
+                    alert('Por favor selecciona un libro primero');
+                    return;
+                }
+                this.currentSession = {
+                    bookId: this.selectedBook,
+                    startTime: new Date().toISOString(),
+                    date: new Date().toISOString().split('T')[0]
+                };
+                this.sessionType = type;
+                this.elapsedSeconds = 0;
+                this.alarmPlayed = false;
+                this.closeModal('sessionModal');
+                this.render();
+            },
+            
+            endSession() {
+                if (!this.currentSession) return;
+                const minutes = Math.round(this.elapsedSeconds / 60);
+                this.sessions.push({
+                    id: Date.now(),
+                    bookId: this.currentSession.bookId,
+                    date: this.currentSession.date,
+                    startTime: this.currentSession.startTime,
+                    endTime: new Date().toISOString(),
+                    minutes: minutes
+                });
+                this.currentSession = null;
+                this.sessionType = null;
+                this.saveData();
+                this.render();
+            },
+            
+            completeBook(bookId, comment) {
+                this.books = this.books.map(b => 
+                    b.id === bookId 
+                        ? { ...b, completed: true, completedDate: new Date().toISOString().split('T')[0], comment }
+                        : b
+                );
+                this.saveData();
+                this.closeModal('completeBookModal');
+                this.render();
+            },
+            
+            openModal(modalId) {
+                document.getElementById(modalId).classList.add('active');
+            },
+            
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('active');
+            },
+            
+            renderHome() {
+                const consecutiveDays = this.getConsecutiveDays();
+                const milestones = [3, 7, 14, 30, 60, 100, 365];
+                const nextMilestone = milestones.find(m => m > consecutiveDays);
+                const activeBooks = this.books.filter(b => !b.completed);
+                const today = new Date().toISOString().split('T')[0];
+                const todayMinutes = this.getTotalMinutes(today);
+                const totalMinutes = this.getTotalMinutes();
+                
+                return `
+                    <div class="card gradient-card">
+                        <h2>Días Consecutivos</h2>
+                        <div class="big-number">${consecutiveDays}</div>
+                        ${nextMilestone ? `<div class="next-milestone">Siguiente hito: ${nextMilestone} días</div>` : ''}
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {!currentSession ? (
-                <button
-                  onClick={() => setShowSessionOptions(true)}
-                  disabled={!selectedBook}
-                  className="w-full py-4 bg-green-500 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  <Play className="w-5 h-5" />
-                  Iniciar Sesión de Lectura
-                </button>
-              ) : (
-                <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-lg">Sesión en curso</h3>
-                    <Clock className="w-6 h-6 text-green-600 animate-pulse" />
-                  </div>
-                  <p className="text-gray-600 mb-4">
-                    Leyendo: {books.find(b => b.id === currentSession.bookId)?.title}
-                  </p>
-                  
-                  <div className="bg-white rounded-lg p-4 mb-4">
-                    <p className="text-sm text-gray-600 mb-2">
-                      {sessionType === 'timer' ? 'Tiempo restante' : 'Tiempo transcurrido'}
-                    </p>
-                    <p className="text-4xl font-bold text-blue-600">
-                      {sessionType === 'timer' ? getRemainingTime() : formatTime(elapsedSeconds)}
-                    </p>
-                    {sessionType === 'timer' && elapsedSeconds >= timerMinutes * 60 && (
-                      <p className="text-green-600 font-semibold mt-2">¡Tiempo completado! Finalizando...</p>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={endSession}
-                    className="w-full py-3 bg-red-500 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-600"
-                  >
-                    <Pause className="w-5 h-5" />
-                    Finalizar Sesión
-                  </button>
-                </div>
-              )}
-
-              {showSessionOptions && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                  <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                    <h3 className="font-semibold text-lg mb-4">Tipo de sesión</h3>
                     
-                    <button
-                      onClick={() => startSession('free')}
-                      className="w-full mb-3 p-4 border-2 border-blue-500 rounded-lg hover:bg-blue-50 text-left"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Clock className="w-6 h-6 text-blue-500" />
-                        <div>
-                          <p className="font-semibold">Lectura Libre</p>
-                          <p className="text-sm text-gray-600">Con cronómetro</p>
-                        </div>
-                      </div>
-                    </button>
-
-                    <div className="mb-3 p-4 border-2 border-purple-500 rounded-lg">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Timer className="w-6 h-6 text-purple-500" />
-                        <div className="flex-1">
-                          <p className="font-semibold">Temporizador</p>
-                          <p className="text-sm text-gray-600">Con alarma y finalización automática</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          max="180"
-                          value={timerMinutes}
-                          onChange={(e) => setTimerMinutes(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-20 px-3 py-2 border rounded"
-                        />
-                        <span className="text-sm text-gray-600">minutos</span>
-                        <button
-                          onClick={() => startSession('timer')}
-                          className="ml-auto px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-                        >
-                          Iniciar
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setShowSessionOptions(false)}
-                      className="w-full py-2 bg-gray-300 rounded hover:bg-gray-400"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg shadow p-4">
-                  <p className="text-sm text-gray-600 mb-1">Hoy</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {getTotalMinutes(new Date().toISOString().split('T')[0])} min
-                  </p>
-                </div>
-                <div className="bg-white rounded-lg shadow p-4">
-                  <p className="text-sm text-gray-600 mb-1">Total</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {getTotalMinutes()} min
-                  </p>
-                </div>
-              </div>
-            </div>
-            );
-          };const StatsView = () => {
-            const dailyData = getMinutesByDayThisMonth();
-            const monthlyData = getMinutesByMonthThisYear();
-            
-            const maxDailyActual = Math.max(...dailyData.map(d => d.minutes), 0);
-            const maxMonthlyActual = Math.max(...monthlyData.map(d => d.minutes), 0);
-            
-            const yAxisMax = maxDailyActual > 0 ? Math.ceil(maxDailyActual / 10) * 10 : 10;
-            
-            const yAxisSteps = [];
-            for (let i = 10; i <= yAxisMax; i += 10) {
-              yAxisSteps.push(i);
-            }
-
-            return (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <TrendingUp className="w-6 h-6" />
-                  Estadísticas
-                </h2>
-
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="font-semibold mb-4">Minutos por Día (Este Mes)</h3>
-                  <div className="flex gap-2">
-                    <div className="flex flex-col-reverse justify-between text-xs text-gray-500 h-40 py-2">
-                      <span>0</span>
-                      {yAxisSteps.map(step => (
-                        <span key={step}>{step}</span>
-                      ))}
-                    </div>
-                    <div className="flex-1 overflow-x-auto">
-                      <div className="flex items-end gap-0.5 h-40 min-w-full border-l border-b border-gray-300">
-                        {dailyData.map((d) => {
-                          const heightPx = yAxisMax > 0 ? Math.floor((d.minutes / yAxisMax) * 160) : 0;
-                          return (
-                            <div key={d.day} className="flex flex-col items-center flex-1 min-w-[8px]">
-                              <div
-                                className="w-full bg-blue-500 rounded-t transition-all hover:bg-blue-600 cursor-pointer"
-                                style={{ 
-                                  height: d.minutes > 0 ? `${heightPx}px` : '0px'
-                                }}
-                                title={`Día ${d.day}: ${d.minutes} min`}
-                              />
-                              <span className="text-[10px] text-gray-500 mt-1">{d.day}</span>
+                    <div class="card">
+                        <h2>Seleccionar Libro</h2>
+                        ${activeBooks.map(book => `
+                            <div class="book-item ${this.selectedBook === book.id ? 'selected' : ''}" 
+                                 onclick="app.selectedBook = ${book.id}; app.render();">
+                                <div class="book-title">${book.title}</div>
+                                <div class="book-date">Iniciado: ${book.startDate}</div>
                             </div>
-                          );
-                        })}
-                      </div>
+                        `).join('')}
+                        <button class="btn btn-primary" onclick="app.openModal('addBookModal')">+ Agregar Nuevo Libro</button>
                     </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="font-semibold mb-4">Minutos por Mes (Este Año)</h3>
-                  <div className="space-y-2">
-                    {monthlyData.map((d) => {
-                      const widthPercent = maxMonthlyActual > 0 ? (d.minutes / maxMonthlyActual) * 100 : 0;
-                      return (
-                        <div key={d.month} className="flex items-center gap-3">
-                          <span className="text-sm font-medium w-12">{d.month}</span>
-                          <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
-                            {d.minutes > 0 && (
-                              <div
-                                className="bg-purple-500 h-6 rounded-full flex items-center justify-end px-2 transition-all"
-                                style={{ width: `${widthPercent}%`, minWidth: '40px' }}
-                                title={`${d.month}: ${d.minutes}min`}
-                              >
-                                <span className="text-xs text-white font-semibold whitespace-nowrap">
-                                  {d.minutes}min
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                    
+                    ${this.currentSession ? `
+                        <div class="card" style="background: #d1fae5; border: 2px solid #10b981;">
+                            <h2>Sesión en curso</h2>
+                            <p class="mb-3 text-gray">Leyendo: ${this.books.find(b => b.id === this.currentSession.bookId)?.title}</p>
+                            <div class="session-timer">
+                                <div class="timer-label">${this.sessionType === 'timer' ? 'Tiempo restante' : 'Tiempo transcurrido'}</div>
+                                <div class="timer-value">${this.formatTime(0)}</div>
+                            </div>
+                            <button class="btn btn-danger" onclick="app.endSession()">Finalizar Sesión</button>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            );
-          };
-
-          const BooksView = () => {
-            const [localComment, setLocalComment] = useState('');
-
-            const handleCompleteBook = (bookId) => {
-              setCompletingBookData({ id: bookId });
-              setLocalComment('');
-            };
-
-            const handleSaveComment = () => {
-              if (completingBookData) {
-                completeBook(completingBookData.id, localComment);
-                setLocalComment('');
-                setCompletingBookData(null);
-              }
-            };
-
-            const handleCancelComment = () => {
-              setLocalComment('');
-              setCompletingBookData(null);
-            };
-
-            return (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <Book className="w-6 h-6" />
-                  Mis Libros
-                </h2>
-
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold mb-3 text-green-700">En progreso</h3>
-                    {books.filter(b => !b.completed).map(book => (
-                      <div key={book.id} className="bg-white rounded-lg shadow p-4 mb-3">
-                        <h4 className="font-semibold">{book.title}</h4>
-                        <p className="text-sm text-gray-600">Iniciado: {book.startDate}</p>
-                        <button
-                          onClick={() => handleCompleteBook(book.id)}
-                          className="mt-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                        >
-                          Marcar como terminado
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3 text-blue-700">Completados</h3>
-                    {books.filter(b => b.completed).map(book => (
-                      <div key={book.id} className="bg-blue-50 rounded-lg shadow p-4 mb-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold flex items-center gap-2">
-                              {book.title}
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              {book.startDate} - {book.completedDate}
-                            </p>
-                            {book.comment && (
-                              <p className="mt-2 text-sm italic text-gray-700">"{book.comment}"</p>
-                            )}
-                          </div>
+                    ` : `
+                        <button class="btn btn-success" ${!this.selectedBook ? 'disabled' : ''} 
+                                onclick="app.openModal('sessionModal')">Iniciar Sesión de Lectura</button>
+                    `}
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Hoy</div>
+                            <div class="stat-value">${todayMinutes} min</div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {completingBookData && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                      <h3 className="font-semibold text-lg mb-4">Comentario del libro</h3>
-                      <textarea
-                        value={localComment}
-                        onChange={(e) => setLocalComment(e.target.value)}
-                        placeholder="¿Qué te pareció este libro? (opcional)"
-                        className="w-full px-3 py-2 border rounded h-32 mb-4"
-                        style={{ direction: 'ltr' }}
-                        dir="ltr"
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleSaveComment}
-                          className="flex-1 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                        >
-                          Guardar
-                        </button>
-                        <button
-                          onClick={handleCancelComment}
-                          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total</div>
+                            <div class="stat-value" style="color: #9333ea;">${totalMinutes} min</div>
+                        </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          };
-
-          return (
-            <div className="min-h-screen bg-gray-100">
-              <div className="max-w-2xl mx-auto p-4 pb-20">
-                <header className="mb-6">
-                  <h1 className="text-3xl font-bold text-gray-800">Registro de Lectura</h1>
-                  <p className="text-gray-600">Construye tu hábito día a día</p>
-                </header>
-
-                {view === 'home' && <HomeView />}
-                {view === 'stats' && <StatsView />}
-                {view === 'books' && <BooksView />}
-              </div>
-
-              <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
-                <div className="max-w-2xl mx-auto flex justify-around py-3">
-                  <button
-                    onClick={() => setView('home')}
-                    className={`flex flex-col items-center gap-1 ${
-                      view === 'home' ? 'text-blue-600' : 'text-gray-600'
-                    }`}
-                  >
-                    <Clock className="w-6 h-6" />
-                    <span className="text-xs">Inicio</span>
-                  </button>
-                  <button
-                    onClick={() => setView('stats')}
-                    className={`flex flex-col items-center gap-1 ${
-                      view === 'stats' ? 'text-blue-600' : 'text-gray-600'
-                    }`}
-                  >
-                    <TrendingUp className="w-6 h-6" />
-                    <span className="text-xs">Estadísticas</span>
-                  </button>
-                  <button
-                    onClick={() => setView('books')}
-                    className={`flex flex-col items-center gap-1 ${
-                      view === 'books' ? 'text-blue-600' : 'text-gray-600'
-                    }`}
-                  >
-                    <Book className="w-6 h-6" />
-                    <span className="text-xs">Libros</span>
-                  </button>
-                </div>
-              </nav>
-            </div>
-          );
+                    
+                    <div id="addBookModal" class="modal">
+                        <div class="modal-content">
+                            <h3>Agregar Libro</h3>
+                            <input type="text" id="newBookTitle" placeholder="Título del libro" class="mb-4">
+                            <div class="flex gap-2">
+                                <button class="btn btn-primary" onclick="app.addBook(document.getElementById('newBookTitle').value)">Agregar</button>
+                                <button class="btn btn-secondary" onclick="app.closeModal('addBookModal')">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="sessionModal" class="modal">
+                        <div class="modal-content">
+                            <h3>Tipo de sesión</h3>
+                            <div class="session-options">
+                                <button class="option-btn" onclick="app.startSession('free')">
+                                    <div class="option-title">Lectura Libre</div>
+                                    <div class="option-desc">Con cronómetro</div>
+                                </button>
+                                <div class="option-btn">
+                                    <div class="option-title">Temporizador</div>
+                                    <div class="option-desc">Con alarma y finalización automática</div>
+                                    <div class="timer-input-group">
+                                        <input type="number" class="timer-input" min="1" max="180" value="${this.timerMinutes}" 
+                                               onchange="app.timerMinutes = parseInt(this.value)">
+                                        <span class="text-sm">minutos</span>
+                                        <button class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem;" 
+                                                onclick="app.startSession('timer')">Iniciar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="app.closeModal('sessionModal')">Cancelar</button>
+                        </div>
+                    </div>
+                `;
+            },
+            
+            renderStats() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                
+                const dailyData = [];
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(year, month, day).toISOString().split('T')[0];
+                    dailyData.push({ day, minutes: this.getTotalMinutes(date) });
+                }
+                
+                const maxDaily = Math.max(...dailyData.map(d => d.minutes), 10);
+                
+                const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                const monthlyData = monthNames.map((name, i) => ({
+                    month: name,
+                    minutes: this.sessions.filter(s => new Date(s.date).getFullYear() === year && new Date(s.date).getMonth() === i)
+                        .reduce((sum, s) => sum + s.minutes, 0)
+                }));
+                const maxMonthly = Math.max(...monthlyData.map(d => d.minutes), 1);
+                
+                return `
+                    <div class="card">
+                        <h2>Minutos por Día (Este Mes)</h2>
+                        <div class="chart">
+                            ${dailyData.map(d => `
+                                <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                                    <div class="bar" style="height: ${(d.minutes / maxDaily) * 100}%;" 
+                                         title="Día ${d.day}: ${d.minutes} min"></div>
+                                    <div class="day-label">${d.day}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h2>Minutos por Mes (Este Año)</h2>
+                        ${monthlyData.map(d => `
+                            <div class="month-bar">
+                                <div class="month-label">${d.month}</div>
+                                <div class="month-bar-bg">
+                                    ${d.minutes > 0 ? `
+                                        <div class="month-bar-fill" style="width: ${(d.minutes / maxMonthly) * 100}%;">
+                                            <span class="month-bar-text">${d.minutes}min</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            },
+            
+            renderBooks() {
+                const activeBooks = this.books.filter(b => !b.completed);
+                const completedBooks = this.books.filter(b => b.completed);
+                
+                return `
+                    <div class="card">
+                        <h3 style="color: #10b981;">En progreso</h3>
+                        ${activeBooks.map(book => `
+                            <div class="book-item">
+                                <div class="book-title">${book.title}</div>
+                                <div class="book-date mb-2">Iniciado: ${book.startDate}</div>
+                                <button class="btn btn-success" style="padding: 0.5rem 1rem; width: auto;" 
+                                        onclick="app.openModal('completeBookModal'); app.completingBookId = ${book.id};">
+                                    Marcar como terminado
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="card">
+                        <h3 style="color: #3b82f6;">Completados</h3>
+                        ${completedBooks.map(book => `
+                            <div class="book-item" style="background: #eff6ff;">
+                                <div class="book-title">${book.title} ✓</div>
+                                <div class="book-date">${book.startDate} - ${book.completedDate}</div>
+                                ${book.comment ? `<p class="text-sm mt-2" style="font-style: italic;">"${book.comment}"</p>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div id="completeBookModal" class="modal">
+                        <div class="modal-content">
+                            <h3>Comentario del libro</h3>
+                            <textarea id="bookComment" placeholder="¿Qué te pareció este libro? (opcional)" class="mb-4"></textarea>
+                            <div class="flex gap-2">
+                                <button class="btn btn-success" onclick="app.completeBook(app.completingBookId, document.getElementById('bookComment').value)">Guardar</button>
+                                <button class="btn btn-secondary" onclick="app.closeModal('completeBookModal')">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
         };
-
-        ReactDOM.render(<ReadingTracker />, document.getElementById('root'));
+        
+        app.init();
     </script>
 </body>
 </html>
