@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="description" content="App para registrar y hacer seguimiento del hábito de lectura">
+    <title>Registro de Lectura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { Book, Clock, TrendingUp, Calendar, CheckCircle, Play, Pause, Timer } = lucide;
+
+        const ReadingTracker = () => {
+          const [view, setView] = useState('home');
+          const [books, setBooks] = useState([]);
+          const [sessions, setSessions] = useState([]);
+          const [currentSession, setCurrentSession] = useState(null);
+          const [sessionType, setSessionType] = useState(null);
+          const [timerMinutes, setTimerMinutes] = useState(10);
+          const [elapsedSeconds, setElapsedSeconds] = useState(0);
+          const [selectedBook, setSelectedBook] = useState(null);
+          const [showMilestone, setShowMilestone] = useState(false);
+          const [milestoneText, setMilestoneText] = useState('');
+          const [showSessionOptions, setShowSessionOptions] = useState(false);
+          const [completingBookData, setCompletingBookData] = useState(null);
+          const [showAddBookModal, setShowAddBookModal] = useState(false);
+          
+          const intervalRef = useRef(null);
+          const alarmPlayedRef = useRef(false);
+
+          useEffect(() => {
+            const savedBooks = localStorage.getItem('readingBooks');
+            const savedSessions = localStorage.getItem('readingSessions');
+            if (savedBooks) setBooks(JSON.parse(savedBooks));
+            if (savedSessions) setSessions(JSON.parse(savedSessions));
+          }, []);
+
+          useEffect(() => {
+            localStorage.setItem('readingBooks', JSON.stringify(books));
+          }, [books]);
+
+          useEffect(() => {
+            localStorage.setItem('readingSessions', JSON.stringify(sessions));
+          }, [sessions]);useEffect(() => {
+            if (currentSession) {
+              alarmPlayedRef.current = false;
+              intervalRef.current = setInterval(() => {
+                const now = new Date();
+                const start = new Date(currentSession.startTime);
+                const elapsed = Math.floor((now - start) / 1000);
+                setElapsedSeconds(elapsed);
+
+                if (sessionType === 'timer' && elapsed >= timerMinutes * 60 && !alarmPlayedRef.current) {
+                  alarmPlayedRef.current = true;
+                  playAlarm();
+                  setTimeout(() => {
+                    endSessionAuto();
+                  }, 2000);
+                }
+              }, 1000);
+            } else {
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+              }
+              setElapsedSeconds(0);
+            }
+
+            return () => {
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+              }
+            };
+          }, [currentSession, sessionType, timerMinutes]);
+
+          const playAlarm = () => {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1);
+          };
+
+          const formatTime = (seconds) => {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+          };
+
+          const getRemainingTime = () => {
+            const totalSeconds = timerMinutes * 60;
+            const remaining = Math.max(0, totalSeconds - elapsedSeconds);
+            return formatTime(remaining);
+          };
+
+          const getConsecutiveDays = () => {
+            if (sessions.length === 0) return 0;
+            
+            const sortedSessions = [...sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const uniqueDays = [...new Set(sortedSessions.map(s => s.date))];
+            
+            let consecutive = 0;
+            const today = new Date().toISOString().split('T')[0];
+            let checkDate = new Date(today);
+            
+            for (let day of uniqueDays) {
+              const dayStr = checkDate.toISOString().split('T')[0];
+              if (day === dayStr) {
+                consecutive++;
+                checkDate.setDate(checkDate.getDate() - 1);
+              } else {
+                break;
+              }
+            }
+            
+            return consecutive;
+          };
+
+          const consecutiveDays = getConsecutiveDays();
+          const milestones = [3, 7, 14, 30, 60, 100, 365];
+          const nextMilestone = milestones.find(m => m > consecutiveDays) || null;
+          const lastAchievedMilestone = milestones.filter(m => m <= consecutiveDays).pop();
+
+          const startSession = (type) => {
+            if (!selectedBook) {
+              alert('Por favor selecciona un libro primero');
+              return;
+            }
+            
+            const now = new Date();
+            setCurrentSession({
+              bookId: selectedBook,
+              startTime: now.toISOString(),
+              date: now.toISOString().split('T')[0]
+            });
+            setSessionType(type);
+            setShowSessionOptions(false);
+
+            if (nextMilestone) {
+              setMilestoneText(`Próximo hito: ${nextMilestone} días consecutivos`);
+              setShowMilestone(true);
+              setTimeout(() => setShowMilestone(false), 3000);
+            }
+          };
+
+          const endSessionAuto = () => {
+            if (!currentSession) return;
+            
+            const endTime = new Date();
+            const start = new Date(currentSession.startTime);
+            const minutes = Math.round((endTime - start) / 60000);
+
+            const newSession = {
+              id: Date.now(),
+              bookId: currentSession.bookId,
+              date: currentSession.date,
+              startTime: currentSession.startTime,
+              endTime: endTime.toISOString(),
+              minutes: minutes
+            };
+
+            const updatedSessions = [...sessions, newSession];
+            setSessions(updatedSessions);
+
+            const newConsecutive = getConsecutiveDaysForSessions(updatedSessions);
+            if (milestones.includes(newConsecutive) && newConsecutive !== lastAchievedMilestone) {
+              setMilestoneText(`¡Hito alcanzado! ${newConsecutive} días consecutivos 🎉`);
+              setShowMilestone(true);
+              setTimeout(() => setShowMilestone(false), 4000);
+            }
+
+            setCurrentSession(null);
+            setSessionType(null);
+          };
+
+          const endSession = () => {
+            endSessionAuto();
+          };
+
+          const getConsecutiveDaysForSessions = (sessionsList) => {
+            if (sessionsList.length === 0) return 0;
+            
+            const sortedSessions = [...sessionsList].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const uniqueDays = [...new Set(sortedSessions.map(s => s.date))];
+            
+            let consecutive = 0;
+            const today = new Date().toISOString().split('T')[0];
+            let checkDate = new Date(today);
+            
+            for (let day of uniqueDays) {
+              const dayStr = checkDate.toISOString().split('T')[0];
+              if (day === dayStr) {
+                consecutive++;
+                checkDate.setDate(checkDate.getDate() - 1);
+              } else {
+                break;
+              }
+            }
+            
+            return consecutive;
+          };
+
+          const completeBook = (bookId, comment) => {
+            setBooks(prevBooks => prevBooks.map(b => 
+              b.id === bookId 
+                ? { ...b, completed: true, completedDate: new Date().toISOString().split('T')[0], comment }
+                : b
+            ));
+          };
+
+          const getTotalMinutes = (filterDate = null) => {
+            return sessions
+              .filter(s => !filterDate || s.date === filterDate)
+              .reduce((sum, s) => sum + s.minutes, 0);
+          };
+
+          const getMinutesByDayThisMonth = () => {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            const data = [];
+            for (let day = 1; day <= daysInMonth; day++) {
+              const date = new Date(year, month, day).toISOString().split('T')[0];
+              const minutes = getTotalMinutes(date);
+              data.push({ day, minutes });
+            }
+            return data;
+          };
+
+          const getMinutesByMonthThisYear = () => {
+            const year = new Date().getFullYear();
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            return monthNames.map((name, index) => {
+              const minutes = sessions
+                .filter(s => {
+                  const sessionDate = new Date(s.date);
+                  return sessionDate.getFullYear() === year && sessionDate.getMonth() === index;
+                })
+                .reduce((sum, s) => sum + s.minutes, 0);
+              return { month: name, minutes };
+            });
+          };const HomeView = () => {
+            const [newBookInput, setNewBookInput] = useState('');
+
+            const handleAddBookFromModal = () => {
+              if (!newBookInput.trim()) return;
+              const book = {
+                id: Date.now(),
+                title: newBookInput.trim(),
+                startDate: new Date().toISOString().split('T')[0],
+                completed: false
+              };
+              setBooks(prev => [...prev, book]);
+              setSelectedBook(book.id);
+              setNewBookInput('');
+              setShowAddBookModal(false);
+            };
+
+            return (
+            <div className="space-y-6">
+              {showMilestone && (
+                <div className="bg-green-100 border-l-4 border-green-500 p-4 rounded animate-pulse">
+                  <p className="text-green-700 font-semibold">{milestoneText}</p>
+                </div>
+              )}
+
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold">Días Consecutivos</h2>
+                  <Calendar className="w-8 h-8" />
+                </div>
+                <p className="text-5xl font-bold mb-2">{consecutiveDays}</p>
+                {nextMilestone && (
+                  <p className="text-sm opacity-90">Siguiente hito: {nextMilestone} días</p>
+                )}
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Book className="w-5 h-5" />
+                  Seleccionar Libro
+                </h3>
+                
+                <div className="space-y-3 mb-4">
+                  {books.filter(b => !b.completed).map(book => (
+                    <div
+                      key={book.id}
+                      onClick={() => setSelectedBook(book.id)}
+                      className={`p-3 rounded border-2 cursor-pointer transition ${
+                        selectedBook === book.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <p className="font-medium">{book.title}</p>
+                      <p className="text-sm text-gray-500">Iniciado: {book.startDate}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setShowAddBookModal(true)}
+                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  + Agregar Nuevo Libro
+                </button>
+              </div>
+
+              {showAddBookModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                    <h3 className="font-semibold text-lg mb-4">Agregar Libro</h3>
+                    <input
+                      type="text"
+                      value={newBookInput}
+                      onChange={(e) => setNewBookInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddBookFromModal();
+                        }
+                      }}
+                      placeholder="Título del libro"
+                      className="w-full px-3 py-2 border rounded mb-4"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleAddBookFromModal}
+                        className="flex-1 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Agregar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setNewBookInput('');
+                          setShowAddBookModal(false);
+                        }}
+                        className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!currentSession ? (
+                <button
+                  onClick={() => setShowSessionOptions(true)}
+                  disabled={!selectedBook}
+                  className="w-full py-4 bg-green-500 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  <Play className="w-5 h-5" />
+                  Iniciar Sesión de Lectura
+                </button>
+              ) : (
+                <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-lg">Sesión en curso</h3>
+                    <Clock className="w-6 h-6 text-green-600 animate-pulse" />
+                  </div>
+                  <p className="text-gray-600 mb-4">
+                    Leyendo: {books.find(b => b.id === currentSession.bookId)?.title}
+                  </p>
+                  
+                  <div className="bg-white rounded-lg p-4 mb-4">
+                    <p className="text-sm text-gray-600 mb-2">
+                      {sessionType === 'timer' ? 'Tiempo restante' : 'Tiempo transcurrido'}
+                    </p>
+                    <p className="text-4xl font-bold text-blue-600">
+                      {sessionType === 'timer' ? getRemainingTime() : formatTime(elapsedSeconds)}
+                    </p>
+                    {sessionType === 'timer' && elapsedSeconds >= timerMinutes * 60 && (
+                      <p className="text-green-600 font-semibold mt-2">¡Tiempo completado! Finalizando...</p>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={endSession}
+                    className="w-full py-3 bg-red-500 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-600"
+                  >
+                    <Pause className="w-5 h-5" />
+                    Finalizar Sesión
+                  </button>
+                </div>
+              )}
+
+              {showSessionOptions && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                    <h3 className="font-semibold text-lg mb-4">Tipo de sesión</h3>
+                    
+                    <button
+                      onClick={() => startSession('free')}
+                      className="w-full mb-3 p-4 border-2 border-blue-500 rounded-lg hover:bg-blue-50 text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Clock className="w-6 h-6 text-blue-500" />
+                        <div>
+                          <p className="font-semibold">Lectura Libre</p>
+                          <p className="text-sm text-gray-600">Con cronómetro</p>
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="mb-3 p-4 border-2 border-purple-500 rounded-lg">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Timer className="w-6 h-6 text-purple-500" />
+                        <div className="flex-1">
+                          <p className="font-semibold">Temporizador</p>
+                          <p className="text-sm text-gray-600">Con alarma y finalización automática</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          max="180"
+                          value={timerMinutes}
+                          onChange={(e) => setTimerMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-20 px-3 py-2 border rounded"
+                        />
+                        <span className="text-sm text-gray-600">minutos</span>
+                        <button
+                          onClick={() => startSession('timer')}
+                          className="ml-auto px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                        >
+                          Iniciar
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setShowSessionOptions(false)}
+                      className="w-full py-2 bg-gray-300 rounded hover:bg-gray-400"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white rounded-lg shadow p-4">
+                  <p className="text-sm text-gray-600 mb-1">Hoy</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {getTotalMinutes(new Date().toISOString().split('T')[0])} min
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <p className="text-sm text-gray-600 mb-1">Total</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {getTotalMinutes()} min
+                  </p>
+                </div>
+              </div>
+            </div>
+            );
+          };const StatsView = () => {
+            const dailyData = getMinutesByDayThisMonth();
+            const monthlyData = getMinutesByMonthThisYear();
+            
+            const maxDailyActual = Math.max(...dailyData.map(d => d.minutes), 0);
+            const maxMonthlyActual = Math.max(...monthlyData.map(d => d.minutes), 0);
+            
+            const yAxisMax = maxDailyActual > 0 ? Math.ceil(maxDailyActual / 10) * 10 : 10;
+            
+            const yAxisSteps = [];
+            for (let i = 10; i <= yAxisMax; i += 10) {
+              yAxisSteps.push(i);
+            }
+
+            return (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <TrendingUp className="w-6 h-6" />
+                  Estadísticas
+                </h2>
+
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="font-semibold mb-4">Minutos por Día (Este Mes)</h3>
+                  <div className="flex gap-2">
+                    <div className="flex flex-col-reverse justify-between text-xs text-gray-500 h-40 py-2">
+                      <span>0</span>
+                      {yAxisSteps.map(step => (
+                        <span key={step}>{step}</span>
+                      ))}
+                    </div>
+                    <div className="flex-1 overflow-x-auto">
+                      <div className="flex items-end gap-0.5 h-40 min-w-full border-l border-b border-gray-300">
+                        {dailyData.map((d) => {
+                          const heightPx = yAxisMax > 0 ? Math.floor((d.minutes / yAxisMax) * 160) : 0;
+                          return (
+                            <div key={d.day} className="flex flex-col items-center flex-1 min-w-[8px]">
+                              <div
+                                className="w-full bg-blue-500 rounded-t transition-all hover:bg-blue-600 cursor-pointer"
+                                style={{ 
+                                  height: d.minutes > 0 ? `${heightPx}px` : '0px'
+                                }}
+                                title={`Día ${d.day}: ${d.minutes} min`}
+                              />
+                              <span className="text-[10px] text-gray-500 mt-1">{d.day}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="font-semibold mb-4">Minutos por Mes (Este Año)</h3>
+                  <div className="space-y-2">
+                    {monthlyData.map((d) => {
+                      const widthPercent = maxMonthlyActual > 0 ? (d.minutes / maxMonthlyActual) * 100 : 0;
+                      return (
+                        <div key={d.month} className="flex items-center gap-3">
+                          <span className="text-sm font-medium w-12">{d.month}</span>
+                          <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
+                            {d.minutes > 0 && (
+                              <div
+                                className="bg-purple-500 h-6 rounded-full flex items-center justify-end px-2 transition-all"
+                                style={{ width: `${widthPercent}%`, minWidth: '40px' }}
+                                title={`${d.month}: ${d.minutes}min`}
+                              >
+                                <span className="text-xs text-white font-semibold whitespace-nowrap">
+                                  {d.minutes}min
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          const BooksView = () => {
+            const [localComment, setLocalComment] = useState('');
+
+            const handleCompleteBook = (bookId) => {
+              setCompletingBookData({ id: bookId });
+              setLocalComment('');
+            };
+
+            const handleSaveComment = () => {
+              if (completingBookData) {
+                completeBook(completingBookData.id, localComment);
+                setLocalComment('');
+                setCompletingBookData(null);
+              }
+            };
+
+            const handleCancelComment = () => {
+              setLocalComment('');
+              setCompletingBookData(null);
+            };
+
+            return (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Book className="w-6 h-6" />
+                  Mis Libros
+                </h2>
+
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold mb-3 text-green-700">En progreso</h3>
+                    {books.filter(b => !b.completed).map(book => (
+                      <div key={book.id} className="bg-white rounded-lg shadow p-4 mb-3">
+                        <h4 className="font-semibold">{book.title}</h4>
+                        <p className="text-sm text-gray-600">Iniciado: {book.startDate}</p>
+                        <button
+                          onClick={() => handleCompleteBook(book.id)}
+                          className="mt-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                        >
+                          Marcar como terminado
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3 text-blue-700">Completados</h3>
+                    {books.filter(b => b.completed).map(book => (
+                      <div key={book.id} className="bg-blue-50 rounded-lg shadow p-4 mb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold flex items-center gap-2">
+                              {book.title}
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {book.startDate} - {book.completedDate}
+                            </p>
+                            {book.comment && (
+                              <p className="mt-2 text-sm italic text-gray-700">"{book.comment}"</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {completingBookData && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                      <h3 className="font-semibold text-lg mb-4">Comentario del libro</h3>
+                      <textarea
+                        value={localComment}
+                        onChange={(e) => setLocalComment(e.target.value)}
+                        placeholder="¿Qué te pareció este libro? (opcional)"
+                        className="w-full px-3 py-2 border rounded h-32 mb-4"
+                        style={{ direction: 'ltr' }}
+                        dir="ltr"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveComment}
+                          className="flex-1 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelComment}
+                          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-100">
+              <div className="max-w-2xl mx-auto p-4 pb-20">
+                <header className="mb-6">
+                  <h1 className="text-3xl font-bold text-gray-800">Registro de Lectura</h1>
+                  <p className="text-gray-600">Construye tu hábito día a día</p>
+                </header>
+
+                {view === 'home' && <HomeView />}
+                {view === 'stats' && <StatsView />}
+                {view === 'books' && <BooksView />}
+              </div>
+
+              <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
+                <div className="max-w-2xl mx-auto flex justify-around py-3">
+                  <button
+                    onClick={() => setView('home')}
+                    className={`flex flex-col items-center gap-1 ${
+                      view === 'home' ? 'text-blue-600' : 'text-gray-600'
+                    }`}
+                  >
+                    <Clock className="w-6 h-6" />
+                    <span className="text-xs">Inicio</span>
+                  </button>
+                  <button
+                    onClick={() => setView('stats')}
+                    className={`flex flex-col items-center gap-1 ${
+                      view === 'stats' ? 'text-blue-600' : 'text-gray-600'
+                    }`}
+                  >
+                    <TrendingUp className="w-6 h-6" />
+                    <span className="text-xs">Estadísticas</span>
+                  </button>
+                  <button
+                    onClick={() => setView('books')}
+                    className={`flex flex-col items-center gap-1 ${
+                      view === 'books' ? 'text-blue-600' : 'text-gray-600'
+                    }`}
+                  >
+                    <Book className="w-6 h-6" />
+                    <span className="text-xs">Libros</span>
+                  </button>
+                </div>
+              </nav>
+            </div>
+          );
+        };
+
+        ReactDOM.render(<ReadingTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
