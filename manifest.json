@@ -1,0 +1,21 @@
+{
+     "name": "Registro de Lectura",
+     "short_name": "Lectura",
+     "description": "App para registrar el hábito de lectura",
+     "start_url": "/lectura-tracker/",
+     "display": "standalone",
+     "background_color": "#3B82F6",
+     "theme_color": "#3B82F6",
+     "icons": [
+       {
+         "src": "android-chrome-192x192.png",
+         "sizes": "192x192",
+         "type": "image/png"
+       },
+       {
+         "src": "android-chrome-512x512.png",
+         "sizes": "512x512",
+         "type": "image/png"
+       }
+     ]
+   }
