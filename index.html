@@ -444,7 +444,7 @@
                     ${dailyData.map(d => {
     const heightPercent = yAxisMax > 0 ? ((d.minutes / yAxisMax) * 100) : 0;
     return `
-    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
+    <div style="flex: 1; display: flex; flex-direction: column-reverse; align-items: center; height: 100%;">
         <div style="width: 100%; background: ${d.minutes > 0 ? '#3b82f6' : 'transparent'}; border-radius: 0.25rem 0.25rem 0 0; transition: all 0.2s; cursor: pointer; flex-shrink: 0; height: ${heightPercent}%; min-height: ${d.minutes > 0 ? '4px' : '0'};" 
              title="Día ${d.day}: ${d.minutes} min" 
              onmouseover="this.style.background='#2563eb'" 
@@ -522,6 +522,7 @@
     </script>
 </body>
 </html>
+
 
 
 
