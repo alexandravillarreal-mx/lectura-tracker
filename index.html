@@ -433,17 +433,23 @@
                 
                 return `
                     <div class="card">
-                        <h2>Minutos por Día (Este Mes)</h2>
-                        <div class="chart">
-                            ${dailyData.map(d => `
-                                <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                                    <div class="bar" style="height: ${(d.minutes / maxDaily) * 100}%;" 
-                                         title="Día ${d.day}: ${d.minutes} min"></div>
-                                    <div class="day-label">${d.day}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
+    <h2>Minutos por Día (Este Mes)</h2>
+    <div style="display: flex; gap: 0.5rem;">
+        <div style="display: flex; flex-direction: column-reverse; justify-content: space-between; font-size: 0.75rem; color: #6b7280; height: 10rem; padding: 0.5rem 0;">
+            <span>0</span>
+            ${Array.from({length: Math.ceil(maxDaily/10)}, (_, i) => `<span>${(i+1)*10}</span>`).join('')}
+        </div>
+        <div class="chart" style="flex: 1;">
+            ${dailyData.map(d => `
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                    <div class="bar" style="height: ${(d.minutes / maxDaily) * 100}%;" 
+                         title="Día ${d.day}: ${d.minutes} min"></div>
+                    <div class="day-label">${d.day}</div>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+</div>
                     
                     <div class="card">
                         <h2>Minutos por Mes (Este Año)</h2>
@@ -511,4 +517,5 @@
     </script>
 </body>
 </html>
+
 
