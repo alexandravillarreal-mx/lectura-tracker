@@ -410,64 +410,68 @@
             },
             
             renderStats() {
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = now.getMonth();
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
-                
-                const dailyData = [];
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const date = new Date(year, month, day).toISOString().split('T')[0];
-                    dailyData.push({ day, minutes: this.getTotalMinutes(date) });
-                }
-                
-                const maxDaily = Math.max(...dailyData.map(d => d.minutes), 10);
-                
-                const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                const monthlyData = monthNames.map((name, i) => ({
-                    month: name,
-                    minutes: this.sessions.filter(s => new Date(s.date).getFullYear() === year && new Date(s.date).getMonth() === i)
-                        .reduce((sum, s) => sum + s.minutes, 0)
-                }));
-                const maxMonthly = Math.max(...monthlyData.map(d => d.minutes), 1);
-                
-                return `
-                    <div class="card">
-    <h2>Minutos por Día (Este Mes)</h2>
-    <div style="display: flex; gap: 0.5rem;">
-        <div style="display: flex; flex-direction: column-reverse; justify-content: space-between; font-size: 0.75rem; color: #6b7280; height: 10rem; padding: 0.5rem 0;">
-            <span>0</span>
-            ${Array.from({length: Math.ceil(maxDaily/10)}, (_, i) => `<span>${(i+1)*10}</span>`).join('')}
+                renderStats() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const dailyData = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day).toISOString().split('T')[0];
+        dailyData.push({ day, minutes: this.getTotalMinutes(date) });
+    }
+    
+    const maxDaily = Math.max(...dailyData.map(d => d.minutes), 1);
+    const yAxisMax = Math.ceil(maxDaily / 10) * 10 || 10;
+    
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const monthlyData = monthNames.map((name, i) => ({
+        month: name,
+        minutes: this.sessions.filter(s => new Date(s.date).getFullYear() === year && new Date(s.date).getMonth() === i)
+            .reduce((sum, s) => sum + s.minutes, 0)
+    }));
+    const maxMonthly = Math.max(...monthlyData.map(d => d.minutes), 1);
+    
+    return `
+        <div class="card">
+            <h2>Minutos por Día (Este Mes)</h2>
+            <div style="display: flex; gap: 0.5rem;">
+                <div style="display: flex; flex-direction: column-reverse; justify-content: space-between; font-size: 0.75rem; color: #6b7280; height: 10rem; padding: 0.5rem 0;">
+                    <span>0</span>
+                    ${Array.from({length: yAxisMax/10}, (_, i) => `<span>${(i+1)*10}</span>`).join('')}
+                </div>
+                <div style="flex: 1; display: flex; align-items: flex-end; height: 10rem; border-left: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; gap: 1px;">
+                    ${dailyData.map(d => {
+                        const heightPx = yAxisMax > 0 ? Math.floor((d.minutes / yAxisMax) * 160) : 0;
+                        return `
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                            <div class="bar" style="height: ${d.minutes > 0 ? heightPx + 'px' : '0'}; min-height: ${d.minutes > 0 ? '3px' : '0'};" 
+                                 title="Día ${d.day}: ${d.minutes} min"></div>
+                            <div class="day-label">${d.day}</div>
+                        </div>
+                    `}).join('')}
+                </div>
+            </div>
         </div>
-        <div class="chart" style="flex: 1;">
-            ${dailyData.map(d => `
-                <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                    <div class="bar" style="height: ${(d.minutes / maxDaily) * 100}%;" 
-                         title="Día ${d.day}: ${d.minutes} min"></div>
-                    <div class="day-label">${d.day}</div>
+        
+        <div class="card">
+            <h2>Minutos por Mes (Este Año)</h2>
+            ${monthlyData.map(d => `
+                <div class="month-bar">
+                    <div class="month-label">${d.month}</div>
+                    <div class="month-bar-bg">
+                        ${d.minutes > 0 ? `
+                            <div class="month-bar-fill" style="width: ${(d.minutes / maxMonthly) * 100}%;">
+                                <span class="month-bar-text">${d.minutes}min</span>
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
             `).join('')}
         </div>
-    </div>
-</div>
-                    
-                    <div class="card">
-                        <h2>Minutos por Mes (Este Año)</h2>
-                        ${monthlyData.map(d => `
-                            <div class="month-bar">
-                                <div class="month-label">${d.month}</div>
-                                <div class="month-bar-bg">
-                                    ${d.minutes > 0 ? `
-                                        <div class="month-bar-fill" style="width: ${(d.minutes / maxMonthly) * 100}%;">
-                                            <span class="month-bar-text">${d.minutes}min</span>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            },
+    `;
+},
             
             renderBooks() {
                 const activeBooks = this.books.filter(b => !b.completed);
@@ -517,5 +521,6 @@
     </script>
 </body>
 </html>
+
 
 
